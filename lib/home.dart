@@ -4,16 +4,25 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
-class MyLogin extends StatefulWidget {
-  const MyLogin({Key? key}) : super(key: key);
+class MyHome extends StatefulWidget {
+  const MyHome({Key? key}) : super(key: key);
 
   @override
   _MyLoginState createState() => _MyLoginState();
 }
 
-class _MyLoginState extends State<MyLogin> {
+class _MyLoginState extends State<MyHome> {
+
+  @override
+  void initState() {
+    super.initState();
+    checkIfLogin();
+
+  }
 
   bool isLoading=false;
+  String status="Welcome to h Senid Mobile";
+  String username="";
 
   @override
   Widget build(BuildContext context) {
@@ -30,7 +39,7 @@ class _MyLoginState extends State<MyLogin> {
             Container(
               padding: EdgeInsets.only(left: 35, top: 100),
               child: Text(
-                'Welcome\nH Senid Mobile',
+                'Hi $username',
                 style: TextStyle(color: Colors.white, fontSize: 33),
               ),
             ),
@@ -46,28 +55,20 @@ class _MyLoginState extends State<MyLogin> {
                       margin: EdgeInsets.only(left: 35, right: 35),
                       child: Column(
                         children: [
-                          TextField(
-                            style: TextStyle(color: Colors.black),
-                            controller: usernameController,
-                            decoration: InputDecoration(
-                                fillColor: Colors.grey.shade100,
-                                filled: true,
-                                hintText: "Username",
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                )),
+                          Text(
+                            status,
+                            style: TextStyle(color: Colors.black, fontSize: 33),
                           ),
                           SizedBox(
                             height: 30,
                           ),
                           TextField(
                             style: TextStyle(),
-                            obscureText: true,
-                            controller: passwordController,
+                            controller: statusController,
                             decoration: InputDecoration(
                                 fillColor: Colors.grey.shade100,
                                 filled: true,
-                                hintText: "Password",
+                                hintText: "Status",
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(10),
                                 )),
@@ -79,7 +80,7 @@ class _MyLoginState extends State<MyLogin> {
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Text(
-                                'Sign in',
+                                'My Status',
                                 style: TextStyle(
                                     fontSize: 27, fontWeight: FontWeight.w700),
                               ),
@@ -92,7 +93,7 @@ class _MyLoginState extends State<MyLogin> {
                                       setState(() {
                                         isLoading=true;
                                       });
-                                      signIn(usernameController.text, passwordController.text);
+                                      signIn(statusController.text);
                                     },
                                     icon: Icon(
                                       Icons.arrow_forward,
@@ -107,11 +108,13 @@ class _MyLoginState extends State<MyLogin> {
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               TextButton(
-                                onPressed: () {
-                                  Navigator.pushNamed(context, 'register');
+                                onPressed: () async{
+                                  SharedPreferences sharedPreference=await SharedPreferences.getInstance();
+                                  sharedPreference.clear();
+                                  Navigator.pushNamed(context, 'login');
                                 },
                                 child: Text(
-                                  'Sign Up',
+                                  'Sign out',
                                   textAlign: TextAlign.left,
                                   style: TextStyle(
                                       decoration: TextDecoration.underline,
@@ -120,16 +123,6 @@ class _MyLoginState extends State<MyLogin> {
                                 ),
                                 style: ButtonStyle(),
                               ),
-                              TextButton(
-                                  onPressed: () {},
-                                  child: Text(
-                                    'Forgot Password',
-                                    style: TextStyle(
-                                      decoration: TextDecoration.underline,
-                                      color: Color(0xff4c505b),
-                                      fontSize: 18,
-                                    ),
-                                  )),
                             ],
                           )
                         ],
@@ -145,35 +138,31 @@ class _MyLoginState extends State<MyLogin> {
     );
   }
 
-  TextEditingController usernameController = new TextEditingController();
-  TextEditingController passwordController = new TextEditingController();
+  TextEditingController statusController = new TextEditingController();
 
-  signIn(String username, password) async{
+  signIn(String status) async{
     var jsonData = null;
     SharedPreferences sharedPreference=await SharedPreferences.getInstance();
-    var response = await http.post(
-        Uri.parse('http://10.0.2.2:8080/api/auth/signin'),
-        headers: <String, String>{
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode(<String, String>{
-          'username': username,
-          'password': password
-        }));
-    jsonData = json.decode(response.body);
+    var param=sharedPreference.getString("id").toString()+"/"+status;
+    print(sharedPreference.getString("token").toString());
+    var response = await http.get(
+        Uri.parse('http://10.0.2.2:8080/api/test/status/$param'),
+        headers: {
+          'Authorization':  'JiffryShuhail '+sharedPreference.getString("token").toString()
+        });
+    print(response.body);
     setState(() {
       isLoading = false;
     });
     if (response.statusCode == 200) {
-      print(jsonData);
-      sharedPreference.setString("username", jsonData["username"]);
-      sharedPreference.setString("status", jsonData["status"]);
-      sharedPreference.setString("token", jsonData["token"]);
-      sharedPreference.setString("id", jsonData["id"]);
-      Navigator.pushNamed(context, 'home');
+      setState(() {
+        this.status = status;
+      });
+      sharedPreference.setString("status", status);
+      statusController.clear();
     } else {
-      print(response.body);
       final messengerState = ScaffoldMessenger.of(context);
+      jsonData = json.decode(response.body);
       messengerState.showSnackBar(
         SnackBar(
           content: new Text(jsonData["error"]),
@@ -183,4 +172,19 @@ class _MyLoginState extends State<MyLogin> {
       );
     }
   }
+
+  checkIfLogin() async{
+    SharedPreferences sharedPreference=await SharedPreferences.getInstance();
+    if(sharedPreference.getString("status")!=null){
+      setState(() {
+        this.status = sharedPreference.getString("status").toString();
+      });
+    }
+    if(sharedPreference.getString("username")!=null){
+      setState(() {
+        this.username = sharedPreference.getString("username").toString();
+      });
+    }
+  }
+
 }

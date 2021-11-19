@@ -1,6 +1,8 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:loginuicolors/home.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'login.dart';
 
@@ -19,7 +21,18 @@ class StartState extends State<SplashScreen> {
     // ignore: todo
     // TODO: implement initState
     super.initState();
-    startTime();
+    checkIfLogin();
+
+  }
+
+  checkIfLogin() async{
+    SharedPreferences sharedPreference=await SharedPreferences.getInstance();
+    if(sharedPreference.getString("token")!=null){
+      Navigator.pushReplacement(
+          context, MaterialPageRoute(builder: (context) => MyHome()));
+    }else{
+      startTime();
+    }
   }
 
   startTime() async {
@@ -43,17 +56,13 @@ class StartState extends State<SplashScreen> {
         children: [
           Container(
             decoration: BoxDecoration(
-                color: new Color(0xffF5591F),
-                gradient: LinearGradient(
-                    colors: [(new Color(0x483d8b)), new Color(0xffF2861E)],
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter)),
+              image: DecorationImage(
+                  image: AssetImage('assets/login.png'), fit: BoxFit.cover),),
           ),
-          Center(
-            child: Container(
-              child: Image.asset('assets/login.png'),
-            ),
-          )
+          Align(
+            alignment: Alignment.bottomCenter,
+            child: new Image.asset('assets/log.png')
+          ),
         ],
       ),
     );
